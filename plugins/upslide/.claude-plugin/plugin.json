@@ -1,6 +1,6 @@
 {
   "name": "upslide",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Use UpSlide from Claude in PowerPoint and Excel: the UpSlide connector and its skills, installed and updated together.",
   "author": {
     "name": "UpSlide"
