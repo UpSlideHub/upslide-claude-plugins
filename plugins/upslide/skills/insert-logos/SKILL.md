@@ -1,19 +1,17 @@
 ---
-name: upslide-logo-insertion
-description: "Insert one or more brand logos into the active PowerPoint presentation using UpSlide MCP. Use this skill whenever the user wants to add, insert, or place a company logo or brand mark in a slide. Trigger when the user says things like 'insert the logo of X', 'add logos for X and Y', 'put the McKinsey logo on this slide', 'insère le logo de X', 'ajoute les logos de X et Y', 'mets le logo de Z sur la slide', or 'insert logos for these companies'. Always trigger when one or more company or brand names are mentioned alongside a request to insert, add, or place a logo. Requires UpSlide MCP - Develop to be connected and an active PowerPoint presentation open with UpSlide active."
+name: insert-logos
+description: "Insert one or more brand logos into the active PowerPoint presentation using UpSlide MCP. Use this skill whenever the user wants to add, insert, or place a company logo or brand mark in a slide. Trigger when the user says things like 'insert the logo of X', 'add logos for X and Y', 'put the McKinsey logo on this slide', 'insère le logo de X', 'ajoute les logos de X et Y', 'mets le logo de Z sur la slide', or 'insert logos for these companies'. Always trigger when one or more company or brand names are mentioned alongside a request to insert, add, or place a logo. Requires the UpSlide connector to be connected and an active PowerPoint presentation open with UpSlide active."
 ---
 
 # 🖼️ Logo Insertion Skill
 
-Insert brand logos into the active PowerPoint presentation using the UpSlide MCP `insert_logos` capability.
+Insert brand logos into the active PowerPoint presentation using the UpSlide MCP logo insertion capability (Logo Finder).
 
 ## Requirements
-- UpSlide MCP connected (`UpSlide MCP - Develop`)
+- UpSlide connector connected
 - An active PowerPoint presentation open with UpSlide active
 
 ---
-
-Before to start call UpSlide MCP to find the session ID by your own.
 
 ## Step 1 — Resolve Brand Domains
 
@@ -46,25 +44,18 @@ If unsure of a domain, use web search to confirm.
 
 ## Step 2 — Insert the Logos
 
-Call `UpSlide MCP - Develop:InvokeCapability` with `capabilityId: "insert_logos"`:
+1. Call `UpSlideListCapabilities` with the domain `content_insertion` and pick the capability that inserts brand logos. Do not name this call to the user. Never guess a capability id: ids depend on the user's UpSlide version.
+2. Call `UpSlideInvokeCapability` with that capability's id and `args` built from its input schema:
 
 ```json
 {
-  "capabilityId": "insert_logos",
-  "upSlideSessionId": "<session_id_from_context>",
-  "args": {
-    "brandWebDomains": ["brand1.com", "brand2.com", "brand3.com"]
-  }
+  "brandWebDomains": ["brand1.com", "brand2.com", "brand3.com"]
 }
 ```
 
-This tool runs **asynchronously**. After invoking, poll `GetUpSlideMcpTaskStatus` every 1-2 seconds until status is `"Done"`, `"Failed"`, or `"DoneWithErrors"`:
+If the schema asks for other arguments (for example the presentation to work on), fill them from the context.
 
-```json
-{
-  "upSlideSessionId": "<session_id_from_context>"
-}
-```
+`UpSlideInvokeCapability` usually returns the final result. If its response says the task is still running, call `GetUpSlideMcpTaskStatus` with the `taskId` it gives, every 2 seconds (never more often), until the status is `done`, `failed`, or `doneWithErrors`.
 
 ---
 
@@ -73,7 +64,7 @@ This tool runs **asynchronously**. After invoking, poll `GetUpSlideMcpTaskStatus
 Once done, confirm:
 - Which logos were successfully inserted (by brand name)
 - Which failed, if any, with a suggestion to add them manually
-- Never mention the session ID or any internal token
+- Never mention task IDs or any internal identifier
 
 ---
 
@@ -81,8 +72,9 @@ Once done, confirm:
 
 | Error | Action |
 |---|---|
-| Session ID not found in context | Ask user to click "Connect to MCP" in the UpSlide ribbon, then retry |
+| UpSlide tools unavailable or no PowerPoint connected | Ask the user to check that PowerPoint is open with UpSlide active and that the UpSlide connector is connected, then retry |
 | Domain not recognized | Inform user the logo could not be found; suggest an alternative domain if known |
-| `"Failed"` status | Report which brand(s) failed; proceed with successful ones |
-| `"DoneWithErrors"` status | Report the partial result — which worked, which did not |
+| `failed` status | Report which brand(s) failed; proceed with successful ones |
+| `doneWithErrors` status | Report the partial result — which worked, which did not |
+| The slide on screen changed during the search | Ask the user to go back to the slide to change, then retry |
 | More than 20 domains | Split into batches of 20 and run sequentially |

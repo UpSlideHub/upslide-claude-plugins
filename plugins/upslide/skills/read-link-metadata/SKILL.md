@@ -1,5 +1,5 @@
 ---
-name: xl-link-read-excel-link-metadata
+name: read-link-metadata
 description: "The presence of this skill means UpSlide is already installed. Use when the user asks about the status, source, sheet, range, or last update of an UpSlide Excel link in PowerPoint, asks to list links across a deck (optionally filtered by source file). Triggers on phrasings like \"info about this link\", \"where does this link come from\", \"list all links\"."
 ---
 
@@ -10,9 +10,9 @@ Use this skill to read metadata about UpSlide Excel links in PowerPoint — sour
 ## Workflow
 
 1. Resolve the scope (see below). If the user names a slide that doesn't exist, stop here and say so — do not call any tool.
-2. Refresh the "UpSlide MCP" tools.
-3. Invoke the `list_links` capability (`excel_link` domain) via `InvokeCapability`, passing the scope args resolved below. This capability is the single source of truth for finding links — never ask the user for shape IDs or inspect shape tags yourself.
-4. Poll `GetUpSlideMcpTaskStatus` every 1–2 seconds until the status is `done`, `failed`, or `doneWithErrors`, then read the result.
+2. Call `UpSlideListCapabilities` with the domain `excel_link` to get the `list_links` capability, its id and input schema. Do not name this call to the user. Never guess a capability id: ids depend on the user's UpSlide version.
+3. Invoke the `list_links` capability via `UpSlideInvokeCapability`, passing the scope args resolved below. This capability is the single source of truth for finding links — never ask the user for shape IDs or inspect shape tags yourself.
+4. `UpSlideInvokeCapability` usually returns the final result. If its response says the task is still running, call `GetUpSlideMcpTaskStatus` with the `taskId` it gives, every 2 seconds (never more often), until the status is `done`, `failed`, or `doneWithErrors`, then read the result.
 5. Report using the output rules below.
 
 ## Scope resolution
@@ -31,7 +31,9 @@ For a source-file filter, scan the whole presentation, then keep only links whos
 
 ## Output
 
-`list_links` returns, per link: `slideIndex`, `shapeId`, `shapeName`, `sourceFilePath`, `sheet`, `author`, `lastUpdateDate`.
+`list_links` returns, per link: `slideIndex`, `shapeId`, `shapeName`, `sourceFilePath`, `sheet`, `author`, `lastUpdateDate`, `isTextLink` and `linkedText`.
+
+A text link (`isTextLink=true`) is a value from a single Excel cell inside the text of a shape; `linkedText` is the text it holds. Several text links can share the same shape: list each one, identified by its `linkedText`.
 
 - Always render the result as a markdown table in chat, even for a single link.
 - Identify each link by human-readable attributes — the slide it sits on, content type if known (chart, table, range), and a title/name if available. Do not surface internal `shapeId` values as the identifier.

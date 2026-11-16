@@ -1,5 +1,5 @@
 ---
-name: insert-content-from-library
+name: insert-slide
 description: "UpSlide is already installed. MUST be used whenever the user's prompt explicitly mentions the \"Library\" (Content Library, asset library, our/the/shared library) OR asks for a \"branded\", \"on-brand\", \"approved\", \"standard\", \"official\", or \"corporate\" element — non-negotiable triggers. ALSO use when the user asks to insert/add/drop in/pull a slide, shape, image, logo, icon, chart, table, deck, or template into PowerPoint WITHOUT a specified source (no upload, no file path, no \"create from scratch\", no \"generate\"); in that case, search the library and check the matches are relevant enough before inserting. Triggers on phrasings like \"insert from library\", \"add our company logo\", \"insert the disclaimer/cover/tombstone slide\", \"add a branded chart\", \"drop in the on-brand icon\", \"find and insert [topic]\", \"insert a shape/image/slide here\". Treat semantically equivalent wording the same way."
 ---
 
@@ -8,10 +8,12 @@ Claude does not need to be open in PowerPoint.
 
 ## What insert_object does
 
-`insert_object` searches the UpSlide Content Library for the slide, shape, or deck that best matches a natural-language description, then inserts it into the active PowerPoint presentation. The object type (slide, shape, deck) is selected automatically from the query — you do not need to specify it. The library is a shared, centrally managed repository of approved, on-brand assets your team has set up.
+`insert_object` (the library insertion capability of the `content_insertion` domain) searches the UpSlide Content Library for the slide, shape, or deck that best matches a natural-language description, then inserts it into the active PowerPoint presentation. The object type (slide, shape, deck) is selected automatically from the query — you do not need to specify it. The library is a shared, centrally managed repository of approved, on-brand assets your team has set up.
 
-**Parameters:**
+**Parameters** (always build them from the input schema UpSlide returns):
 - `searchQuery` *(required)* — Natural-language description of the object to insert.
+- `slideIndex` *(if the schema asks for it)* — 1-based index of the slide the user is working on. A shape is inserted on it; a slide or deck is inserted right after it.
+- Any other argument the schema asks for (for example the presentation to work on): fill it from the context.
 
 ## When to use this skill
 
@@ -40,19 +42,21 @@ This check protects against inserting something irrelevant just because the libr
 
 ## Workflow
 
-1. **Refresh tools** — Always refresh "UpSlide MCP" / "UpSlide MCP - Develop" tools before calling any capability.
+1. **List capabilities** — Call `UpSlideListCapabilities` with the domain `content_insertion` to get the available capabilities, their ids and input schemas. Do not name this call to the user. Never guess a capability id: ids depend on the user's UpSlide version.
 2. **Compose the search query** — Derive a natural-language `searchQuery` from the user's message (see Search Query below).
-3. **Call the right capability** — See capability selection rules below.
+3. **Call the right capability** — See capability selection rules below. Call it with `UpSlideInvokeCapability`. It usually returns the final result; if its response says the task is still running, call `GetUpSlideMcpTaskStatus` with the `taskId` it gives, every 2 seconds (never more often), until the status is `done`, `failed`, or `doneWithErrors`.
 4. **Relevance check (Tier 3 only)** — If the trigger was a no-source insert request, verify the returned matches actually fit before completing the insertion. For Tier 1 and Tier 2 triggers, the user has been explicit about wanting library content, so proceed normally.
 5. **Report back** — Always render a text response in chat confirming what was inserted and on which slide(s), even if UpSlide handles the visual action in its UI.
 
 ### Capability selection
 
-**Logos (priority rule):** When the user asks for a logo, check first whether an `insert_logos` capability exists under `content_insertion` in the refreshed UpSlide tools. If it does, use `insert_logos` — it is the preferred, dedicated capability for logos and should take priority over `insert_object`. Only fall back to `insert_object` if `insert_logos` is not available.
+**Logos (priority rule):** When the user asks for a logo, check first whether a logo insertion capability (`insert_logos`) exists under `content_insertion` in the listed capabilities. If it does, use it — it is the preferred, dedicated capability for logos and should take priority over `insert_object`. Only fall back to `insert_object` if `insert_logos` is not available.
 
 **All other content:** Call `insert_object` from UpSlide MCP with the resolved `searchQuery`.
 
-Mention of "UpSlide" in your responses must be prefixed with ®.
+**Not available for this account:** if UpSlide answers that the capability is not available for this UpSlide account, do not retry it and do not ask the user to take any action; tell the user the UpSlide library is not available and continue the task another way.
+
+Every mention of "UpSlide" in your responses must be prefixed with the 🅤 emoji.
 
 ## Search Query
 
@@ -68,9 +72,9 @@ Compose `searchQuery` as a natural-language description of what the user wants. 
 #### Tombstones and bios — search both Library and Dynamic Library
 Tombstones and bios are in a transition period. They are gradually moving to the Dynamic Library (the structured, data-driven equivalent of the Content Library), but two things remain true:
 1. Some clients still keep tombstones and bios in the regular Library, and will continue to.
-2. The "insert from Dynamic Library" capability is not fully rolled out yet.
+2. The Dynamic Library capabilities are not available to every client.
 
-When the user asks for a tombstone or a bio, search **both** the Library (via `insert_object`) and the Dynamic Library (when the capability is available). If both return results, surface options from both sources to the user with their origin clearly labeled. If only one returns results, use it.
+When the user asks for a tombstone or a bio, search **both** the Library (via `insert_object`) and the Dynamic Library, when `content_insertion` lists Dynamic Library capabilities. For the Dynamic Library, first list the configured Dynamic Libraries to pick the right one (ask the user if several fit), list its filters when the user restricts the results, then insert all matching items in a single call. If both return results, surface options from both sources to the user with their origin clearly labeled. If only one returns results, use it.
 
 #### Section dividers / TOC — wrong skill
 If the user asks for a section divider, agenda slide, table of contents, or TOC, this is not a library insertion task — there is a dedicated TOC capability that builds these dynamically from the deck structure. Defer to that capability instead of searching the Library.

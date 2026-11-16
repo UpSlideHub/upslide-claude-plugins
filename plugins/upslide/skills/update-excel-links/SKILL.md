@@ -1,5 +1,5 @@
 ---
-name: xl-link-update
+name: update-excel-links
 description: "The presence of this skill means UpSlide is already installed. Use whenever the user asks to refresh, update, re-pull, or reload UpSlide Excel links in PowerPoint, at any scope: a single shape (\"refresh this chart\"), one or more slides (\"update slide 4\", \"refresh slides 4 to 8\"), the whole deck (\"update all links in this deck\"), or filtered by source workbook (\"update all links from EY-Databook.xlsx\"). Also load this skill whenever the user mentions UpSlide, PowerPoint links, slides, ppt, a slide number, or any UpSlide MCP tool, since it also governs WHICH slide(s) the action runs on."
 ---
 
@@ -48,9 +48,10 @@ Use this whenever the user wants to refresh, update, re-pull, or reload Excel li
 
 1. **Resolve the target slide(s)** using Part A. The prompt's explicit slide reference always wins over the live editor context.
 2. **Resolve the scope** from the user's wording (see the scope table below).
-3. **Find the update capability.** Using the "UpSlide MCP" tools, list capabilities in the `excel_link` domain to get the correct `capabilityId` for updating links; describe it if the argument shape isn't obvious.
-4. **Invoke** the capability (via "UpSlide MCP" tools) with the resolved scope and the arguments it expects.
-5. **Poll** `GetUpSlideMcpTaskStatus` (via "UpSlide MCP" tools) every 1–2 seconds until the status is `done`, `failed`, or `doneWithErrors`. Only report completion after the task settles.
+3. **Find the capabilities.** Call `UpSlideListCapabilities` with the domain `excel_link` to get the capability that updates links and the one that lists links (`list_links`), with their ids and input schemas. Do not name this call to the user. Never guess a capability id: ids depend on the user's UpSlide version.
+4. **Find the links** when the scope is `shapes`: call `list_links` via `UpSlideInvokeCapability` for the target slide(s). It returns the `slideIndex` and `shapeId` of every link. Never inspect shape tags yourself.
+5. **Invoke** the update capability via `UpSlideInvokeCapability` with the resolved scope and the arguments its schema expects. Pass the scope value exactly as the schema lists it.
+6. **Wait.** `UpSlideInvokeCapability` usually returns the final result. If its response says the task is still running, call `GetUpSlideMcpTaskStatus` with the `taskId` it gives, every 2 seconds (never more often), until the status is `done`, `failed`, or `doneWithErrors`. Only report completion after the task settles.
 6. **Report** using the output rules below.
 
 ## Scope mapping
@@ -59,10 +60,14 @@ The wordings are examples, not an exhaustive list — match any equivalent phras
 
 | User intent | Example phrasings | Scope |
 |---|---|---|
-| Single selection / one shape | "refresh selection", "update this link", "refresh this chart", "update this table" | shapes |
-| One or more slides | "this slide", "slide N", "slides N to M", "update the current slide", "refresh slides 4 through 8" | slides |
-| Whole deck | "this deck", "all links", "the whole presentation", "every link in the file" | presentation |
-| Filtered by source workbook | "all links from <workbook>.xlsx", "links from EY-Databook", "everything sourced from Q1-Pipeline" | source |
+| Single selection / one shape | "refresh selection", "update this link", "refresh this chart", "update this table" | `shapes`, with the selected link(s) |
+| One or more slides | "this slide", "slide N", "slides N to M", "update the current slide", "refresh slides 4 through 8" | `shapes`, with every link `list_links` returns for those slides |
+| Whole deck | "this deck", "all links", "the whole presentation", "every link in the file" | `presentation` |
+| Filtered by source workbook | "all links from <workbook>.xlsx", "links from EY-Databook", "everything sourced from Q1-Pipeline" | `source`, with the workbook as one of the `sourceFilePath` values `list_links` returns |
+
+There is no `slides` scope: the only scope values are `shapes`, `presentation` and `source`. With `shapes`, identify each link as `slideIndex#shapeId` (e.g. a link with slideIndex 8 and shapeId 7 → `8#7`). Never use `presentation` unless the user explicitly asks for the whole deck.
+
+**Text links** (a value from a single Excel cell inside the text of a shape) are refreshed too. `list_links` reports them with `isTextLink=true` and the id of the shape holding the text: pass that shape like any other, and every text link in it is refreshed.
 
 ## Resolution rules (when to pause instead of acting)
 
