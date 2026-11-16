@@ -1,0 +1,11 @@
+{
+  "name": "upslide",
+  "version": "0.1.0",
+  "description": "Use UpSlide from Claude in PowerPoint and Excel: the UpSlide connector and its skills, installed and updated together.",
+  "author": {
+    "name": "UpSlide"
+  },
+  "homepage": "https://www.upslide.com",
+  "repository": "https://github.com/UpSlideHub/upslide-claude-plugins",
+  "keywords": ["upslide", "powerpoint", "excel", "mcp"]
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "upslide": {
+      "type": "http",
+      "url": "https://api.upslide.com/mcp"
+    }
+  }
+}
