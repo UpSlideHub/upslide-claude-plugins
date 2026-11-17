@@ -45,10 +45,25 @@ Each member then connects the UpSlide connector with their own UpSlide account
 If the Owner has turned off *User-created skills*, members cannot add the marketplace themselves:
 the Owner path above is the only one.
 
+Claude only syncs an organisation marketplace from a **private or internal** GitHub repository.
+
 ## Updates
 
-When a skill changes, UpSlide publishes a new plugin version in this repository. Installed plugins
-pick it up through Claude's plugin updates: there is nothing to download again.
+When a skill changes, UpSlide publishes a new plugin version in this repository. There is nothing to
+download again, but Claude does not pick the new version up the moment it is published:
+
+- **One user**: in Claude, open **Customize > Plugins**, click **+ Add > Manage marketplaces**,
+  click **…** next to the UpSlide marketplace, then **Check for updates**.
+- **Organisation**: the Owner's GitHub sync picks the new version up (up to 30 minutes); the Owner
+  can also click **Re-sync** in **Organization settings > Plugins & skills**. Members get it on their
+  next session.
+
+Start a new conversation in Claude for PowerPoint or Excel after an update.
+
+## Not supported
+
+In Claude for Microsoft 365, skills and connectors may not be available to organisations that use
+Claude through Amazon Bedrock, Google Vertex AI, Microsoft Foundry or an LLM gateway.
 
 ## Repository layout
 
