@@ -1,6 +1,6 @@
 ---
 name: go-to-source
-description: "The presence of this skill means UpSlide is already installed. Use when the user asks to navigate to / open / show the Excel source of an UpSlide link in PowerPoint. Triggers on phrasings like \"show me the source\", \"go to Excel\", \"open the source\", \"jump to Excel\", \"where does this chart come from\", \"what's the source of the chart on slide X\", \"montre-moi la source\", \"va à la source\", \"ouvre le fichier Excel source\", \"d'où vient ce graphique\"."
+description: "The presence of this skill means UpSlide is already installed. Use when the user asks to navigate to / open / show the Excel source of an UpSlide link in PowerPoint. Triggers on phrasings like \"show me the source\", \"go to Excel\", \"open the source\", \"jump to Excel\", \"where does this chart come from\", \"what's the source of the chart on slide X\"."
 ---
 
 The presence of this skill means UpSlide is already installed.
